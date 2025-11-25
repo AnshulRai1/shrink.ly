@@ -1,0 +1,149 @@
+import {nanoid} from 'nanoid'
+import { Link } from '../models/link.model.js'
+import { ApiResponse } from '../utils/ApiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { ApiError } from '../utils/ApiError.js';
+
+const generateShortUrl = asyncHandler(async(req, res)=>{
+    const link = req.body.url;
+    if(!link){
+        throw new ApiError(400,"url is missing")
+    }
+    let urlObj;
+    try {
+        urlObj = new URL(link)
+    } catch (error) {
+        throw new ApiError(400, "Please provide correct url")
+    }
+    if(!(urlObj.protocol==="http:" || urlObj.protocol==="https:")){
+        throw new ApiError(400,"Only Provide a link with proper protocol(https or http)")
+    }
+
+    urlObj.hostname = urlObj.hostname.toLowerCase()//converts the domain to lowercase
+    let normalizedUrl = urlObj.href.replace(/\/+$/,"");//removes the trailing slashes
+    const existingLink = await Link.findOne({url:normalizedUrl})
+    if(existingLink){
+        console.log("existing link")
+        return res.status(400).json({
+            status: 400,
+            message: "Link already exists"
+            });
+    }
+        if(req.body.code){
+        let code = req.body.code
+        if((code.length<6 || code.length>8)){
+            throw new ApiError(400,"code must be of 6-8 character long")
+        }
+        console.log(code)
+        const existing = await Link.findOne({code})
+        if(existing){
+            return res.status(400).json({
+            status: 400,
+            message: "Custom code already exists"
+            });
+        }
+    }
+    let code = nanoid(8)
+    while(await Link.findOne({code})){
+        code = nanoid(8)
+    }
+
+    const shortLinkCreated = await Link.create({
+        code,
+        url:normalizedUrl,
+        createdAt: new Date()
+    })
+    return res
+    .status(201)
+    .json(
+        new ApiResponse(201, {
+            code:shortLinkCreated.code,
+            shortUrl:`${process.env.BASE_DOMAIN}/${shortLinkCreated.code}`,
+            originalUrl:shortLinkCreated.url
+        },
+        "Short link successfully created"
+    )
+    )
+})
+
+const getAllLinks = asyncHandler(async (req, res)=>{
+    const links = await Link.find({}).sort({createdAt:-1})
+    const formatted = links.map(link=>({
+        code: link.code,
+        shortUrl:`${process.env.BASE_DOMAIN}/${link.code}`,
+        clicks:link.clicks,
+        originalUrl:link.url,
+        lastClicked:link.lastClicked,
+        createdAt:link.createdAt
+    }))
+    // console.log(formatted)
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,
+            formatted,
+            "All links successfully fetched"
+        )
+    )
+})
+
+const getOriginalUrl = asyncHandler(async (req, res)=>{
+    const {code} = req.params
+    // console.log(code);
+    
+    if(!code){
+        throw new ApiError(400,"code is missing")
+    }
+    const originalUrl = await Link.findOne({code})
+    if(!originalUrl){
+        throw new ApiError(404,"Short url does not exist")
+    }
+    await Link.updateOne(
+        {code},
+        {$inc:{clicks:1},$set:{lastClicked:new Date()}}
+    )
+    res.redirect(302, originalUrl.url)
+
+    
+
+})
+
+const deleteLink = asyncHandler(async(req, res)=>{
+    const {code} = req.params
+    if(!code){
+        throw new ApiError(400,"link is missing")
+    }
+
+    const deletestatus = await Link.deleteOne({code})
+    if(deletestatus.deletedCount===0){
+        throw new ApiError(404, "Something went wrong while deleting link")
+    }
+
+    res.status(200)
+    .json(
+        new ApiResponse(200,"Link deleted successfully")
+    )
+
+})
+const getSingleLinkStats = asyncHandler(async(req, res)=>{
+    const {code} = req.params
+    if(!code){
+        throw new ApiError(400, "Code is missing")
+    }
+    const linkStats = await Link.findOne({code}).select("-_id -__v")
+    if(!linkStats){
+        throw new ApiError(404,"Not found link")
+    }
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, linkStats,"Stats for the code fetched successfully")
+    )
+})
+export { 
+    generateShortUrl,
+    getAllLinks,
+    getOriginalUrl,
+    deleteLink,
+    getSingleLinkStats
+} 
