@@ -3,7 +3,6 @@ import cors from "cors"
 import dotenv from "dotenv";
 dotenv.config()
 const app = express();
-console.log(process.env.CORS_ORIGIN);
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN.split(","),
