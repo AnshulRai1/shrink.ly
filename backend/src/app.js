@@ -1,11 +1,15 @@
 import express from "express"
 import cors from "cors"
-
+import dotenv from "dotenv";
+dotenv.config()
 const app = express();
+console.log(process.env.CORS_ORIGIN);
+
 app.use(cors({
-    origin:"http://localhost:5173",
-    allowedHeaders:false
+  origin: process.env.CORS_ORIGIN.split(","),
+  credentials: true
 }))
+
 
 app.use(express.json());
 
