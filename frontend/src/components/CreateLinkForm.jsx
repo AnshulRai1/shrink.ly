@@ -16,7 +16,7 @@ export default function CreateLinkForm({ onCreated }){
     try{
       const body = { url }
       if (code) body.code = code
-      const data = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/links`, {
+      const data = await fetch(`${import.meta.env.VITE_API_URL}/links`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
