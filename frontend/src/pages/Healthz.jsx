@@ -5,8 +5,8 @@ export default function HealthzPage(){
   useEffect(()=>{
     async function load(){
       try{
-        console.log("healthz")
-        const res = await fetch(`http://localhost:8000/healthz`).then(r=>r.json())
+        // console.log("healthz")
+        const res = await fetch(`${import.meta.env.VITE_API_URL}`).then(r=>r.json())
         console.log(res)
         setData(res)
       }catch(err){ setData({ ok:false }) }
