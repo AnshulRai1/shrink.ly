@@ -6,7 +6,7 @@ export default function HealthzPage(){
     async function load(){
       try{
         // console.log("healthz")
-        const res = await fetch(`${import.meta.env.VITE_API_URL}`).then(r=>r.json())
+        const res = await fetch(`${import.meta.env.VITE_BASE_DOMAIN}/healthz`).then(r=>r.json())
         console.log(res)
         setData(res)
       }catch(err){ setData({ ok:false }) }
